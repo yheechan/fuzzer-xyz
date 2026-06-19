@@ -1,0 +1,3 @@
+[submodule "Angora"]
+	path = Angora
+	url = https://github.com/AngoraFuzzer/Angora.git
