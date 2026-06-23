@@ -1,0 +1,2 @@
+
+NUM_FUZZERS = 4

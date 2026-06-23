@@ -2,10 +2,30 @@ from enum import Enum
 from pathlib import Path
 
 PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
+
+AFL_ROOT = PROJ_ROOT / "AFLplusplus"
+AFL_CC = AFL_ROOT / "afl-clang-lto"
+AFL_CXX = AFL_ROOT / "afl-clang-lto++"
+AFL_FUZZER = AFL_ROOT / "afl-fuzz"
+
 ANGORA_ROOT = PROJ_ROOT / "Angora"
 ANGORA_CC = ANGORA_ROOT / "bin" / "angora-clang"
 ANGORA_CXX = ANGORA_ROOT / "bin" / "angora-clang++"
 ANGORA_FUZZER = ANGORA_ROOT / "bin" / "fuzzer"
+
+BB_COV_DIR = PROJ_ROOT / "bb_cov"
+BB_COV_BUILD = BB_COV_DIR / "build"
+
+# Angora's prebuilt LLVM passes use the legacy PassManagerBuilder API, which was
+# removed after LLVM ~12. The system clang is 20.x, so angora-clang must be
+# pointed at an LLVM 12.0.1 backend via ANGORA_CC/ANGORA_CXX (see build_logics).
+LLVM12_ROOT = Path("/home/yangheechan/Downloads/llvm_12.0.1_install")
+
+
+BASELINE_FUZZERS = [
+    "aflpp",
+    "angora",
+]
 
 TARGET_SUBJECTS = [
     "avconv",
@@ -52,9 +72,6 @@ PASS_OPTIONS = {
 }
 
 PASS_DIRS = {
-    PassEnum.SA_PASS: GROOVY_BUILD,
-    PassEnum.UNIT_DRIVER_PASS: GROOVY_BUILD,
-    PassEnum.EXTRACTOR_PASS: GROOVY_BUILD,
     PassEnum.BB_COV_PASS: BB_COV_BUILD,
     PassEnum.PATH_COV_PASS: BB_COV_BUILD,
 }

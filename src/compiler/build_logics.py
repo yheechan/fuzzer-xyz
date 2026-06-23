@@ -1,9 +1,14 @@
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
-from crossfuzz.common_utils.constant import PROJ_ROOT
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from src.utils.constants import PROJ_ROOT
 
 
 def build_libav(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
