@@ -6,9 +6,12 @@ from pathlib import Path
 
 from src.utils.constants import (
     PROJ_ROOT,
-    LLVM12_ROOT,
     ANGORA_CC,
     ANGORA_ROOT,
+)
+
+from src.utils.configs import (
+    LLVM12_ROOT,
 )
 
 # External taint-source model for open64(), kept here so the Angora submodule

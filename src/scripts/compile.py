@@ -29,7 +29,7 @@ from src.utils.common_utils import (
 )
 
 from src.fuzzer.fuzzer_factory import FuzzerFactory
-from src.fuzzer.fuzzer import Fuzzer
+
 @dataclass
 class ParsedArgv:
     output_dir: Path

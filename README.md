@@ -1,5 +1,9 @@
 # focalpp_baseline_runner
 
+## TODO:
+1. Implement angora build logic
+2. Implement aflpp build logic
+3. Implement aflpp fuzz pipeline
 
 ## Prerequisites
 1. Clang/LLVM 20 (default environment setting)
@@ -27,7 +31,7 @@
     $ pip install -r requirements.txt
     ```
 
-### Submodules build
+## Submodules build
 ```
 $ git submodules update --init --recursive
 $ cd AFLplusplus; make -j20
@@ -37,13 +41,22 @@ $ cd bb_cov; make -j20
 $ cd Angora; ./buid/build.sh
 ```
 
+## Configurations to set before excution
+* ``src/utils/configs.py``
+    * fuzzing configs:
+        * ``NUM_FUZZER``: # of processes to run fuzzing
+    * experiment configs:
+        * ``LLVM20_ROOT``, ``LLVM12_ROOT``: absolute paths to llvm's install directory
+        * ``ANGORA_RUN_DIR``: must have less character than ``SUN_LEN``
+
 ## Usage:
 1. Compile target
     ```
-    $ python3 focalpp_baseline_runner/src/scripts/compile.py -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER
+    $ python3 focalpp_baseline_runner/src/scripts/compile.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER
     ```
 
 2. Run fuzz
+    * Command to run fuzzing for 24 hours
     ```
-    $
+    $ timeout --signal=2 24h python3 focalpp_baseline_runner/src/scripts/fuzz.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER [-fid FUZZ_ID] -e EXPERIMENT_NAME
     ```

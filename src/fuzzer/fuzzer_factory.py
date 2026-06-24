@@ -18,7 +18,19 @@ class FuzzerFactory:
     }
 
     @classmethod
-    def create_fuzzer(cls, output_dir: Path, target_program: str, fuzzer_name: str) -> Fuzzer:
+    def create_fuzzer(
+        cls,
+        output_dir: Path,
+        target_program: str,
+        fuzzer_name: str,
+        experiment_name: str = None,
+        fuzz_id: str = None
+    ) -> Fuzzer:
         if fuzzer_name not in cls.fuzzers:
             raise ValueError(f"Unknown fuzzer: {fuzzer_name}")
-        return cls.fuzzers[fuzzer_name](output_dir, target_program)
+        return cls.fuzzers[fuzzer_name](
+            output_dir,
+            target_program,
+            experiment_name,
+            fuzz_id
+        )

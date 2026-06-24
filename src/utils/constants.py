@@ -16,12 +16,6 @@ ANGORA_FUZZER = ANGORA_ROOT / "bin" / "fuzzer"
 BB_COV_DIR = PROJ_ROOT / "bb_cov"
 BB_COV_BUILD = BB_COV_DIR / "build"
 
-# Angora's prebuilt LLVM passes use the legacy PassManagerBuilder API, which was
-# removed after LLVM ~12. The system clang is 20.x, so angora-clang must be
-# pointed at an LLVM 12.0.1 backend via ANGORA_CC/ANGORA_CXX (see build_logics).
-LLVM12_ROOT = Path("/home/yangheechan/Downloads/llvm_12.0.1_install")
-
-
 BASELINE_FUZZERS = [
     "aflpp",
     "angora",
