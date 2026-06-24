@@ -11,7 +11,7 @@ if str(ROOT_DIR) not in sys.path:
 from src.utils.constants import PROJ_ROOT
 
 
-def build_libav(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_libav(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "libav-12.3.tar.gz"
     dest_fn = work_dir / "libav-12.3.tar.gz"
@@ -39,6 +39,10 @@ def build_libav(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     extra_cflags = "-g -O0"
     if for_baseline_fuzz:
         extra_cflags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links PIE;
+    # the bitcode must therefore be PIC or the final link fails on relocations.
+    if for_angora:
+        extra_cflags += " -fPIC"
     extra_cflags += " -Wno-error=incompatible-function-pointer-types"
 
     cmd = [
@@ -63,7 +67,7 @@ def build_libav(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_bison(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_bison(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "bison-3.8.2.tar.gz"
     dest_fn = work_dir / "bison-3.8.2.tar.gz"
@@ -91,6 +95,10 @@ def build_bison(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "./configure",
@@ -113,7 +121,7 @@ def build_bison(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_libjpeg_turbo(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_libjpeg_turbo(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "libjpeg-turbo-3.1.4.1.tar.gz"
     dest_fn = work_dir / "libjpeg-turbo-3.1.4.1.tar.gz"
@@ -147,6 +155,10 @@ def build_libjpeg_turbo(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "cmake",
@@ -177,7 +189,7 @@ def build_libjpeg_turbo(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_libdwarf(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_libdwarf(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "libdwarf-2.3.1.tar.gz"
     dest_fn = work_dir / "libdwarf-2.3.1.tar.gz"
@@ -211,6 +223,10 @@ def build_libdwarf(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "cmake",
@@ -236,7 +252,7 @@ def build_libdwarf(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_exiv2(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_exiv2(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "exiv2-0.28.8.tar.gz"
     dest_fn = work_dir / "exiv2-0.28.8.tar.gz"
@@ -299,7 +315,7 @@ def build_exiv2(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_ffmpeg(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_ffmpeg(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "ffmpeg-8.1.1.tar.xz"
     dest_fn = work_dir / "ffmpeg-8.1.1.tar.xz"
@@ -354,7 +370,7 @@ def build_ffmpeg(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_GraphicsMagick(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_GraphicsMagick(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "GraphicsMagick-1.3.47.tar.xz"
     dest_fn = work_dir / "GraphicsMagick-1.3.47.tar.xz"
@@ -383,6 +399,10 @@ def build_GraphicsMagick(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "./configure",
@@ -406,7 +426,7 @@ def build_GraphicsMagick(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_ghostpdl(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_ghostpdl(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "ghostpdl-10.07.1.tar.gz"
     dest_fn = work_dir / "ghostpdl-10.07.1.tar.gz"
@@ -435,6 +455,10 @@ def build_ghostpdl(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     # autogen.sh regenerates configure and forwards these args straight to it.
     cmd = [
@@ -458,7 +482,7 @@ def build_ghostpdl(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_jasper(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_jasper(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "jasper-4.2.9.tar.gz"
     dest_fn = work_dir / "jasper-4.2.9.tar.gz"
@@ -495,6 +519,10 @@ def build_jasper(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "cmake",
@@ -527,7 +555,7 @@ def build_jasper(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_mpg123(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_mpg123(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "mpg123-1.33.5.tar.bz2"
     dest_fn = work_dir / "mpg123-1.33.5.tar.bz2"
@@ -558,6 +586,10 @@ def build_mpg123(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "./configure",
@@ -581,7 +613,7 @@ def build_mpg123(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_nasm(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_nasm(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "nasm-3.01.tar.gz"
     dest_fn = work_dir / "nasm-3.01.tar.gz"
@@ -611,6 +643,10 @@ def build_nasm(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "./configure",
@@ -633,7 +669,7 @@ def build_nasm(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_binutils(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_binutils(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "binutils-2.46.0.tar.xz"
     dest_fn = work_dir / "binutils-2.46.0.tar.xz"
@@ -664,6 +700,10 @@ def build_binutils(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "./configure",
@@ -687,7 +727,7 @@ def build_binutils(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_poppler(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_poppler(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "poppler-26.06.0.tar.xz"
     dest_fn = work_dir / "poppler-26.06.0.tar.xz"
@@ -722,6 +762,10 @@ def build_poppler(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "cmake",
@@ -768,7 +812,7 @@ def build_poppler(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_xpdf(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_xpdf(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "xpdf-4.06.tar.gz"
     dest_fn = work_dir / "xpdf-4.06.tar.gz"
@@ -803,6 +847,10 @@ def build_xpdf(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "cmake",
@@ -833,7 +881,7 @@ def build_xpdf(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_pspp(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_pspp(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "pspp-2.1.1.tar.gz"
     dest_fn = work_dir / "pspp-2.1.1.tar.gz"
@@ -862,6 +910,10 @@ def build_pspp(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "./configure",
@@ -887,7 +939,7 @@ def build_pspp(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_libtiff(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_libtiff(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "libtiff-4.7.1.tar.gz"
     dest_fn = work_dir / "libtiff-4.7.1.tar.gz"
@@ -921,6 +973,10 @@ def build_libtiff(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "./configure",
@@ -944,7 +1000,7 @@ def build_libtiff(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_libxml2(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_libxml2(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "libxml2-2.15.3.tar.gz"
     dest_fn = work_dir / "libxml2-2.15.3.tar.gz"
@@ -973,6 +1029,10 @@ def build_libxml2(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     # libxml2's autogen.sh regenerates configure AND forwards these args to it
     # ($srcdir/configure $EXTRA_ARGS "$@"), so do it in one step rather than
@@ -999,7 +1059,7 @@ def build_libxml2(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     return True
 
 
-def build_expat(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
+def build_expat(work_dir: Path, for_baseline_fuzz: bool=False, for_angora: bool=False) -> bool:
     # 1. copy source code
     src_fn = PROJ_ROOT / "data" / "subjects" / "expat-2.8.1.tar.gz"
     dest_fn = work_dir / "expat-2.8.1.tar.gz"
@@ -1028,6 +1088,10 @@ def build_expat(work_dir: Path, for_baseline_fuzz: bool=False) -> bool:
     compiler_flags = "-g -O0"
     if for_baseline_fuzz:
         compiler_flags += " --coverage -fno-inline"
+    # Angora consumes this whole-program .bc via angora-clang, which links
+    # PIE; the bitcode must be PIC or the final link fails on relocations.
+    if for_angora:
+        compiler_flags += " -fPIC"
 
     cmd = [
         "./configure",

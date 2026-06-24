@@ -11,18 +11,26 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from src.utils.constants import (
+    PACKAGE_MAP,
     PROJ_ROOT,
     INIT_SEED_MAP,
     SUBJECT_ARGV
+)
+from src.compiler.build_logics import (
+    BUILD_LOGICS_MAP
 )
 
 class Fuzzer(ABC):
     output_dir: Path
     target_program: str
+    experiment_name: str
+    NUM_FUZZERS: int
+    fuzz_id: str
 
     CC: str
     CXX: str
     FUZZER: str
+    
     build_logic: callable
     fuzz_id: str
 
@@ -34,24 +42,25 @@ class Fuzzer(ABC):
             output_dir: Path,
             target_program: str,
             experiment_name: str = None,
+            NUM_FUZZERS: int = 4,
             fuzz_id: str = None
         ):
         self.output_dir = output_dir
         self.target_program = target_program
-        self.experiment_name = experiment_name
+        self.NUM_FUZZERS = NUM_FUZZERS
         self.fuzz_id = fuzz_id
+        self.experiment_name = experiment_name
+
+        self.package_name = PACKAGE_MAP[target_program]
+        self.build_logic = BUILD_LOGICS_MAP[self.package_name]
+
 
     def __str__(self) -> str:
         return self.__class__.__name__
     
+    @abstractmethod
     def compile(self) -> bool:
-        print(f"Building {self.target_program} with {self.__class__.__name__}...")
-        success = self.build_logic(self.output_dir / "drivers" / "orig_build")
-        if not success:
-            print(f"Failed to build {self.target_program} with {self.__class__.__name__}")
-            return False
-        print(f"Successfully built {self.target_program} with {self.__class__.__name__}")
-        return True
+        raise NotImplementedError("Subclasses must implement the compile method.")
       
     def init_fuzz_output_dir(self) -> bool:
         self.experiment_dirn = self.output_dir / "baseline_fuzzing" / self.__class__.__name__ / self.experiment_name

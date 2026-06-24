@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import sys
 import signal
@@ -13,20 +14,29 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from src.utils.constants import (
-    PACKAGE_MAP,
+    PROJ_ROOT,
     ANGORA_CC,
     ANGORA_CXX,
     ANGORA_FUZZER,
+    ANGORA_ROOT,
 )
 from src.utils.configs import (
-    NUM_FUZZERS,
     ANGORA_RUN_DIR,
-    SUN_LEN
+    SUN_LEN,
+    LLVM12_ROOT,
+)
+from src.compiler.compile_utils import (
+    get_ld_flags,
+    make_bitcode,
+)
+from src.utils.common_utils import (
+    remove_file,
 )
 from src.fuzzer.fuzzer import Fuzzer
-from src.builder.angora_builder import (
-    BUILD_LOGICS_MAP
-)
+
+# External taint-source model for open64() (libav/ffmpeg call open64 under
+# -D_FILE_OFFSET_BITS=64). open64_rule.c is committed; the .o is compiled on demand.
+ANGORA_RULES_DIR = PROJ_ROOT / "data" / "angora_rules"
 
 class AngoraFuzzer(Fuzzer):
     def __init__(
@@ -34,15 +44,174 @@ class AngoraFuzzer(Fuzzer):
             output_dir: Path,
             target_program: str,
             experiment_name: str = None,
+            NUM_FUZZERS: int = 4,
             fuzz_id: str = None
         ):
-        super().__init__(output_dir, target_program, experiment_name, fuzz_id)
+        super().__init__(output_dir, target_program, experiment_name, NUM_FUZZERS, fuzz_id)
         self.CC = str(ANGORA_CC)
         self.CXX = str(ANGORA_CXX)
         self.FUZZER = str(ANGORA_FUZZER)
-        self.package_name = PACKAGE_MAP[target_program]
-        self.build_logic = BUILD_LOGICS_MAP[self.package_name]
-    
+
+    # ------------------------------------------------------------------ #
+    # compile: build one LLVM-12 whole-program .bc (per-target build      #
+    # logic), then turn that single .bc into .fast and .taint generically.#
+    # NOTE: compile() runs from compile.py before the fuzz logger exists, #
+    # so this path uses print(), not self.logger.                         #
+    # ------------------------------------------------------------------ #
+    def _angora_env(self, rule_list: Path = None, custom_obj: Path = None, track: bool = False) -> dict:
+        """angora-clang must use the LLVM-12 backend its prebuilt passes need."""
+        env = os.environ.copy()
+        env["PATH"] = str(LLVM12_ROOT / "bin") + os.pathsep + env.get("PATH", "")
+        ld_paths = [str(ANGORA_ROOT / "bin" / "lib"), str(LLVM12_ROOT / "lib")]
+        if env.get("LD_LIBRARY_PATH"):
+            ld_paths.append(env["LD_LIBRARY_PATH"])
+        env["LD_LIBRARY_PATH"] = os.pathsep.join(ld_paths)
+        env["ANGORA_CC"] = str(LLVM12_ROOT / "bin" / "clang")
+        env["ANGORA_CXX"] = str(LLVM12_ROOT / "bin" / "clang++")
+        if track:
+            env["USE_TRACK"] = "1"
+        if rule_list is not None:
+            env["ANGORA_TAINT_RULE_LIST"] = str(rule_list)
+        if custom_obj is not None:
+            env["ANGORA_TAINT_CUSTOM_RULE"] = str(custom_obj)
+        return env
+
+    def _ensure_open64_obj(self) -> Path:
+        src = ANGORA_RULES_DIR / "open64_rule.c"
+        obj = ANGORA_RULES_DIR / "open64_rule.o"
+        if not src.exists():
+            print(f"Missing open64 taint-source model: {src}")
+            return None
+        res = subprocess.run(
+            [str(LLVM12_ROOT / "bin" / "clang"), "-c", "-fPIC", "-O2", str(src), "-o", str(obj)]
+        )
+        if res.returncode != 0 or not obj.exists():
+            print("Failed to compile open64_rule.o")
+            return None
+        return obj
+
+    def _build_target_bc(self, work_dir: Path) -> Path:
+        """Build the target into a whole-program LLVM-12, -fPIC .bc via gllvm.
+
+        The bitcode's canonical home is system_drivers/<target>.angora.bc (next
+        to the other drivers), which is also the cache key. `work_dir`
+        (angora_build) is only the build workspace and is kept after extraction.
+        """
+        sys_dir = self.output_dir / "drivers" / "system_drivers"
+        sys_dir.mkdir(parents=True, exist_ok=True)
+        angora_bc = sys_dir / f"{self.target_program}.angora.bc"
+        if angora_bc.exists():
+            print(f"Reusing existing Angora bitcode: {angora_bc}")
+            return angora_bc
+
+        prog = work_dir / "install" / "bin" / self.target_program
+
+        # Point gclang / get-bc at the LLVM-12 toolchain (angora-clang's backend).
+        saved = {k: os.environ.get(k) for k in ("LLVM_COMPILER", "LLVM_COMPILER_PATH")}
+        os.environ["LLVM_COMPILER"] = "clang"
+        os.environ["LLVM_COMPILER_PATH"] = str(LLVM12_ROOT / "bin")
+        try:
+            work_dir.mkdir(parents=True, exist_ok=True)
+            if not self.build_logic(work_dir, for_angora=True):
+                print(f"Failed to build {self.target_program} for Angora bitcode")
+                return None
+            if not prog.exists():
+                print(f"Built program not found: {prog}")
+                return None
+            if not make_bitcode(prog):     # get-bc -> <work_dir>/install/bin/<target>.bc
+                print(f"Failed to extract bitcode from {prog}")
+                return None
+        finally:
+            for k, v in saved.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+
+        shutil.copyfile(prog.with_suffix(".bc"), angora_bc)
+        print(f"Saved Angora bitcode to {angora_bc}")
+        return angora_bc
+
+    def _compile_drivers_from_bc(self, bc_fn: Path, orig_prog_fn: Path) -> bool:
+        """Generic: one .bc -> <target>.fast and <target>.taint (no per-target logic)."""
+        sys_dir = self.output_dir / "drivers" / "system_drivers"
+        sys_dir.mkdir(parents=True, exist_ok=True)
+        fast_fn = sys_dir / f"{self.target_program}.fast"
+        taint_fn = sys_dir / f"{self.target_program}.taint"
+        ld_flags = get_ld_flags(orig_prog_fn)
+
+        # Drop any stale drivers first so a failed rebuild can't leave an old
+        # binary that check_fuzz_targets() would accept as valid.
+        remove_file(fast_fn)
+        remove_file(taint_fn)
+
+        # --- FAST (light instrumentation; default angora-clang mode) ---
+        cmd = [str(ANGORA_CC), str(bc_fn), "-o", str(fast_fn)] + ld_flags
+        print(f"Building {fast_fn.name} from bitcode...")
+        res = subprocess.run(cmd, env=self._angora_env(), stderr=subprocess.PIPE, text=True)
+        if res.returncode != 0 or not fast_fn.exists():
+            print(f"FAST build failed:\n{res.stderr[-2000:]}")
+            return False
+
+        # --- TAINT (USE_TRACK / DFSan) ---
+        # Seed extra taint-source models (open64 for libav/ffmpeg; dup/dup2/dup3
+        # for libxml2 which dup()s the input fd) as custom, routed to our wrapper
+        # object; then auto-harvest any remaining undefined dfs$<fn> externals
+        # (zlib, modern glibc, ...) as discard.
+        open64_obj = self._ensure_open64_obj()
+        if open64_obj is None:
+            return False
+        rules_fn = sys_dir / f"{self.target_program}.taint_rules.txt"
+        rules_fn.write_text(
+            "fun:open64=custom\n"
+            "fun:dup=custom\n"
+            "fun:dup2=custom\n"
+            "fun:dup3=custom\n"
+        )
+
+        harvested = []
+        linked = False
+        for attempt in range(1, 16):
+            cmd = [str(ANGORA_CC), str(bc_fn), "-o", str(taint_fn)] + ld_flags
+            env = self._angora_env(rule_list=rules_fn, custom_obj=open64_obj, track=True)
+            res = subprocess.run(cmd, env=env, stderr=subprocess.PIPE, text=True)
+            if res.returncode == 0 and taint_fn.exists():
+                linked = True
+                break
+            syms = sorted(set(re.findall(r"dfs\$([A-Za-z0-9_]+)", res.stderr)))
+            if not syms:
+                print(f"TAINT build failed (no dfs$ symbols to harvest):\n{res.stderr[-2000:]}")
+                return False
+            with rules_fn.open("a") as f:
+                for s in syms:
+                    f.write(f"fun:{s}=uninstrumented\nfun:{s}=discard\n")
+            harvested += syms
+            print(f"[taint attempt {attempt}] harvested {len(syms)} external symbol(s)")
+
+        if not linked:
+            print("TAINT build did not converge after harvesting")
+            return False
+        if harvested:
+            # Caveat: any program-internal function discarded here will not
+            # propagate taint. Surface the list so it can be audited.
+            print(f"WARNING: discarded {len(set(harvested))} dfs$ symbol(s) (taint will not "
+                  f"flow through them): {', '.join(sorted(set(harvested)))}")
+
+        print(f"Built {fast_fn.name} and {taint_fn.name}")
+        return True
+
+    def compile(self) -> bool:
+        orig_prog_fn = self.output_dir / "drivers" / "orig_build" / "install" / "bin" / self.target_program
+        if not orig_prog_fn.exists():
+            print(f"Original program (needed for link flags) not found: {orig_prog_fn}")
+            return False
+
+        bc_fn = self._build_target_bc(self.output_dir / "drivers" / "angora_build")
+        if bc_fn is None:
+            return False
+
+        return self._compile_drivers_from_bc(bc_fn, orig_prog_fn)
+
     def check_fuzz_targets(self) -> bool:
         self.taint_fn = self.output_dir / "drivers" / "system_drivers" / f"{self.target_program}.taint"
         if not self.taint_fn.exists():
@@ -83,13 +252,6 @@ class AngoraFuzzer(Fuzzer):
             time.sleep(10)
 
     def fuzz(self) -> bool:
-        # Allow Ctrl+C to terminate the fuzzing process
-        signal.signal(signal.SIGINT, self.handle_sigint)
-        self.logger.info(f"Starting fuzzer processes...")
-        self.logger.info(f"\tFuzzer: {self.FUZZER}")
-        self.logger.info(f"\tTarget Program: {self.target_program}")
-        self.logger.info(f"\tFuzz ID: {self.fuzz_id}")
-
         self.fuzz_outputs_dirn = ANGORA_RUN_DIR / self.fuzz_id
         if len(str(self.fuzz_outputs_dirn)) > SUN_LEN:
             self.logger.error(f"Fuzz outputs directory path is too long: {self.fuzz_outputs_dirn}")
@@ -100,11 +262,13 @@ class AngoraFuzzer(Fuzzer):
             self.FUZZER,
             "-i", str(self.init_seed_dirn),
             "-o", str(self.fuzz_outputs_dirn),
-            "-j", str(NUM_FUZZERS),
+            "-j", str(self.NUM_FUZZERS),
             "-t", str(self.taint_fn),
             "--", str(self.fast_fn)
         ] + self.subject_argv
 
+        self.logger.info(f"Started {self.__class__.__name__} processes. Press Ctrl+C to stop.")
+        
         p = subprocess.Popen(
             fuzz_cmd,
             stdout=subprocess.DEVNULL,
@@ -112,8 +276,6 @@ class AngoraFuzzer(Fuzzer):
             stdin=subprocess.DEVNULL,
         )
         self.processes.append(p)
-
-        self.logger.info("Started fuzzing processes. Press Ctrl+C to stop.")
 
         self.wait_print_fuzz_stats()
         
@@ -124,6 +286,6 @@ class AngoraFuzzer(Fuzzer):
         self.dest_fuzz_outputs_dirn = self.outputs_dirn / self.fuzz_id
         shutil.move(str(self.fuzz_outputs_dirn), str(self.dest_fuzz_outputs_dirn))
 
-        self.logger.info(f"Fuzzing completed. Fuzz outputs moved to: {self.dest_fuzz_outputs_dirn}")
+        self.logger.info(f"{self.__class__.__name__} completed. Fuzz outputs moved to: {self.dest_fuzz_outputs_dirn}")
         
         return True

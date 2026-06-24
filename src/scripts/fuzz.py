@@ -1,5 +1,6 @@
 import argparse
 import sys
+import signal
 
 from pathlib import Path
 from dataclasses import dataclass
@@ -23,6 +24,7 @@ class ParsedArgv:
     target_program: str
     fuzzer: str
     experiment_name: str
+    NUM_FUZZERS: int
     fuzz_id: str
 
 def parse_argv() -> ParsedArgv:
@@ -54,20 +56,29 @@ def parse_argv() -> ParsedArgv:
         choices=BASELINE_FUZZERS
     )
     parser.add_argument(
-        "-fid",
-        "--fuzz-id",
-        required=False,
-        default=None,
-        help="Fuzzing id to distinguish different fuzzing runs. If not specified, it will be set to the current timestamp.",
-        metavar="FUZZ_ID"
-    )
-    parser.add_argument(
         "-e",
         "--experiment-name",
         type=str,
         required=True,
         help="Name of the experiment to run. This will be used to create a subdirectory under the output directory to store fuzzing results.",
         metavar="EXPERIMENT_NAME"
+    )
+    parser.add_argument(
+        "-p",
+        "--parallel",
+        type=int,
+        required=False,
+        default=4,
+        help="Number of parallel fuzzing processes to run. Default is 4.",
+        metavar="NUM_FUZZERS"
+    )
+    parser.add_argument(
+        "-fid",
+        "--fuzz-id",
+        required=False,
+        default=None,
+        help="Fuzzing id to distinguish different fuzzing runs. If not specified, it will be set to the current timestamp.",
+        metavar="FUZZ_ID"
     )
     
     argv = parser.parse_args()
@@ -82,6 +93,7 @@ def parse_argv() -> ParsedArgv:
         target_program=argv.target_program,
         fuzzer=argv.fuzzer,
         experiment_name=argv.experiment_name,
+        NUM_FUZZERS=argv.parallel,
         fuzz_id=argv.fuzz_id
     )
 
@@ -94,6 +106,7 @@ def main():
         target_program=parsed_args.target_program,
         fuzzer_name=parsed_args.fuzzer,
         experiment_name=parsed_args.experiment_name,
+        NUM_FUZZERS=parsed_args.NUM_FUZZERS,
         fuzz_id=parsed_args.fuzz_id
     )
 
@@ -117,7 +130,16 @@ def main():
         print("Failed to check fuzz targets.")
         sys.exit(1)
     
+    # Allow Ctrl+C to terminate the fuzzing process
+    signal.signal(signal.SIGINT, fuzzer.handle_sigint)
+    fuzzer.logger.info(f"[BEGIN] FUZZING INFO:")
+    fuzzer.logger.info(f"\tFuzzer: {fuzzer.FUZZER}")
+    fuzzer.logger.info(f"\tTarget Program: {fuzzer.target_program}")
+    fuzzer.logger.info(f"\tFuzz ID: {fuzzer.fuzz_id}")
+    
     fuzzer.fuzz()
+
+    fuzzer.logger.info("[COMPLETE] Gracefully exiting the fuzzing process!")
 
 if __name__ == "__main__":
     main()

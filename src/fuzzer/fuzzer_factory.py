@@ -24,6 +24,7 @@ class FuzzerFactory:
         target_program: str,
         fuzzer_name: str,
         experiment_name: str = None,
+        NUM_FUZZERS: int = 4,
         fuzz_id: str = None
     ) -> Fuzzer:
         if fuzzer_name not in cls.fuzzers:
@@ -32,5 +33,6 @@ class FuzzerFactory:
             output_dir,
             target_program,
             experiment_name,
+            NUM_FUZZERS,
             fuzz_id
         )

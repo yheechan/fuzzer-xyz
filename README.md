@@ -1,9 +1,21 @@
 # focalpp_baseline_runner
 
 ## TODO:
-1. Implement angora build logic
-2. Implement aflpp build logic
-3. Implement aflpp fuzz pipeline
+- [x] Implement angora driver compilation
+- [x] Implement angora fuzz pipeline
+- [ ] Implement script to run fuzzing tasks on server
+- [ ] Execute 24 hours angora fuzz for 13 target programs
+- [ ] Implement gcov/bbcov coverage measuring script
+- [ ] Implement aflpp fuzz pipeline
+- [ ] Crash analysis
+
+## My Notes:
+- command to execute angora_fuzzer
+```
+$ export ANGORA_FUZZER=/ssd_home/yangheechan/research/focalpp/baseline_fuzzer_reproduction/focalpp_baseline_runner/Angora/bin/fuzzer
+
+$ timeout --signal=2 30s $ANGORA_FUZZER -i focalpp_baseline_runner/data/init_seeds/<target_seed_dir> -o /ssd_home/yangheechan/.angora_runs/<fuzz_id> -j 4 -t <taint> -- <fast> <argv>
+```
 
 ## Prerequisites
 1. Clang/LLVM 20 (default environment setting)
@@ -37,14 +49,13 @@ $ git submodules update --init --recursive
 $ cd AFLplusplus; make -j20
 $ cd bb_cov; make -j20
 
-# Set LLVM version to 12.0.1
+# Add llvm-12/bin/ to PATH
+# Add llvm-12/lib/ to LD_LIBRARY_PATH
 $ cd Angora; ./buid/build.sh
 ```
 
 ## Configurations to set before excution
 * ``src/utils/configs.py``
-    * fuzzing configs:
-        * ``NUM_FUZZER``: # of processes to run fuzzing
     * experiment configs:
         * ``LLVM20_ROOT``, ``LLVM12_ROOT``: absolute paths to llvm's install directory
         * ``ANGORA_RUN_DIR``: must have less character than ``SUN_LEN``
@@ -52,11 +63,15 @@ $ cd Angora; ./buid/build.sh
 ## Usage:
 1. Compile target
     ```
-    $ python3 focalpp_baseline_runner/src/scripts/compile.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER
+    $ time python3 focalpp_baseline_runner/src/scripts/compile.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER
     ```
 
 2. Run fuzz
-    * Command to run fuzzing for 24 hours
-    ```
-    $ timeout --signal=2 24h python3 focalpp_baseline_runner/src/scripts/fuzz.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER [-fid FUZZ_ID] -e EXPERIMENT_NAME
-    ```
+    * Command to run fuzzing for 24 hours on local
+        ```
+        $ timeout --signal=2 24h python3 focalpp_baseline_runner/src/scripts/fuzz.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER -e EXPERIMENT_NAME [-p NUM_FUZZERS] [-fid FUZZ_ID]
+        ```
+    * Command to run fuzzing for 24 hours on server (currently implementing)
+        ```
+        $ time python3 focalpp_baseline_runner/src/scripts/fuzz_on_server.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER -s SERVER_ADDRESS -e EXPERIMENT_NAME [-p NUM_FUZZERS] [-d DURATION]
+        ```
