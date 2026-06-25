@@ -40,3 +40,6 @@ class AFLppFuzzer(Fuzzer):
 
     def fuzz(self) -> bool:
         raise NotImplementedError("Fuzzing logic for AFL++ is not implemented yet.")
+    
+    def targets_on_server(self, server_address: str) -> bool:
+        raise NotImplementedError("Check if targets exist on server for AFL++ is not implemented yet.")

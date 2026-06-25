@@ -289,3 +289,44 @@ class AngoraFuzzer(Fuzzer):
         self.logger.info(f"{self.__class__.__name__} completed. Fuzz outputs moved to: {self.dest_fuzz_outputs_dirn}")
         
         return True
+
+    def targets_on_server(self, server_address: str) -> bool:
+        """
+        Check if the fuzzing targets for the specified fuzzer are present on the server.
+
+        Args:
+            server_address (str): The address of the server.
+
+        Returns:
+            bool: True if the targets are present on the server, False otherwise.
+        """
+
+        cmd = f"ssh {server_address} 'ls {self.taint_fn}'"
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+        result_str = result.stderr.decode().strip()
+        on_server = False if "No such file or directory" in result_str else True
+        if not on_server:
+            print(f"[NO-TARGET] Fuzzing targets {self.taint_fn} not found on server {server_address}.")
+            return False
+        
+        cmd = f"ssh {server_address} 'ls {self.fast_fn}'"
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+        result_str = result.stderr.decode().strip()
+        on_server = False if "No such file or directory" in result_str else True
+        if not on_server:
+            print(f"[NO-TARGET] Fuzzing targets {self.fast_fn} not found on server {server_address}.")
+            return False
+
+        return on_server

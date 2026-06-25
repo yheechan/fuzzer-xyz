@@ -1,9 +1,9 @@
-# focalpp_baseline_runner
+# fuzzer-xyz
 
 ## TODO:
 - [x] Implement angora driver compilation
 - [x] Implement angora fuzz pipeline
-- [ ] Implement script to run fuzzing tasks on server
+- [x] Implement script to run fuzzing tasks on server
 - [ ] Execute 24 hours angora fuzz for 13 target programs
 - [ ] Implement gcov/bbcov coverage measuring script
 - [ ] Implement aflpp fuzz pipeline
@@ -12,9 +12,18 @@
 ## My Notes:
 - command to execute angora_fuzzer
 ```
-$ export ANGORA_FUZZER=/ssd_home/yangheechan/research/focalpp/baseline_fuzzer_reproduction/focalpp_baseline_runner/Angora/bin/fuzzer
+$ export ANGORA_FUZZER=/ssd_home/yangheechan/research/focalpp/baseline_fuzzer_reproduction/fuzzer-xyz/Angora/bin/fuzzer
 
-$ timeout --signal=2 30s $ANGORA_FUZZER -i focalpp_baseline_runner/data/init_seeds/<target_seed_dir> -o /ssd_home/yangheechan/.angora_runs/<fuzz_id> -j 4 -t <taint> -- <fast> <argv>
+$ timeout --signal=2 30s $ANGORA_FUZZER -i fuzzer-xyz/data/init_seeds/<target_seed_dir> -o /ssd_home/yangheechan/.angora_runs/<fuzz_id> -j 4 -t <taint> -- <fast> <argv>
+```
+- set repoisitory on server
+```
+$ parallel-ssh -h ~/.hosts/set_focalpp -i "cd /ssd_home/yangheechan/research/focalpp/baseline_fuzzer_reproduction/; git clone https://github.com/yheechan/fuzzer-xyz.git;"
+$ parallel-ssh -h ~/.hosts/set_focalpp -i "cd /ssd_home/yangheechan/research/focalpp/baseline_fuzzer_reproduction/fuzzer-xyz; git submodule update --init --recursive;"
+
+$ parallel-ssh -h ~/.hosts/focalpp_servers -i "cd /ssd_home/yangheechan/research/focalpp/baseline_fuzzer_reproduction/fuzzer-xyz/bb_cov; make -j20;"
+$ parallel-ssh -h ~/.hosts/focalpp_servers -i "cd /ssd_home/yangheechan/research/focalpp/baseline_fuzzer_reproduction/fuzzer-xyz/Angora; export PATH=/ssd_home/yangheechan/downloads/llvm_12.0.1_install/bin:$PATH; export LD_LIBRARY_PATH=/ssd_home/yangheechan/downloads/llvm_12.0.1_install/lib:$LD_LIBRARY_PATH; llvm-config --version"
+$ parallel-ssh -h ~/.hosts/focalpp_servers -i "cd /ssd_home/yangheechan/research/focalpp/baseline_fuzzer_reproduction/fuzzer-xyz/Angora; export PATH=/ssd_home/yangheechan/downloads/llvm_12.0.1_install/bin:$PATH; export LD_LIBRARY_PATH=/ssd_home/yangheechan/downloads/llvm_12.0.1_install/lib:$LD_LIBRARY_PATH; ./build/build.sh"
 ```
 
 ## Prerequisites
@@ -45,7 +54,7 @@ $ timeout --signal=2 30s $ANGORA_FUZZER -i focalpp_baseline_runner/data/init_see
 
 ## Submodules build
 ```
-$ git submodules update --init --recursive
+$ git submodule update --init --recursive
 $ cd AFLplusplus; make -j20
 $ cd bb_cov; make -j20
 
@@ -63,15 +72,15 @@ $ cd Angora; ./buid/build.sh
 ## Usage:
 1. Compile target
     ```
-    $ time python3 focalpp_baseline_runner/src/scripts/compile.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER
+    $ time python3 fuzzer-xyz/src/scripts/compile.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER
     ```
 
 2. Run fuzz
     * Command to run fuzzing for 24 hours on local
         ```
-        $ timeout --signal=2 24h python3 focalpp_baseline_runner/src/scripts/fuzz.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER -e EXPERIMENT_NAME [-p NUM_FUZZERS] [-fid FUZZ_ID]
+        $ timeout --signal=2 24h python3 fuzzer-xyz/src/scripts/fuzz.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER -e EXPERIMENT_NAME [-p NUM_FUZZERS] [-fid FUZZ_ID]
         ```
     * Command to run fuzzing for 24 hours on server (currently implementing)
         ```
-        $ time python3 focalpp_baseline_runner/src/scripts/fuzz_on_server.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER -s SERVER_ADDRESS -e EXPERIMENT_NAME [-p NUM_FUZZERS] [-d DURATION]
+        $ time python3 fuzzer-xyz/src/scripts/fuzz_on_server.py [-h] -o OUTPUT_DIR -t TARGET_PROGRAM -f FUZZER -s SERVER_ADDRESS -e EXPERIMENT_NAME [-p NUM_FUZZERS] [-d DURATION]
         ```
