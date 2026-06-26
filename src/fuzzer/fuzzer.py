@@ -148,7 +148,7 @@ class Fuzzer(ABC):
                 p.send_signal(signal.SIGINT)
     
     
-    def send_fuzz_tarets_to_server(self, server_address: str) -> bool:
+    def send_fuzz_targets_to_server(self, server_address: str) -> bool:
 
         # Make sure the output directory exists on the server
         cmd = f"ssh {server_address} 'mkdir -p {self.output_dir}'"
@@ -241,4 +241,25 @@ class Fuzzer(ABC):
         
         return True
 
+    def coverage_targets_on_server(self, server_address: str) -> bool:
+        baseline_build_dirp = self.output_dir / "drivers" / "baseline_build"
+        system_drivers_dirp = self.output_dir / "drivers" / "system_drivers"
 
+        gcov_fp = baseline_build_dirp / "install" / "bin" / self.target_program
+        bbcov_fp = system_drivers_dirp / f"{self.target_program}.cov"
+
+        targets = [gcov_fp, bbcov_fp]
+        for target in targets:
+            cmd = f"ssh {server_address} 'ls {target}'"
+            result = subprocess.run(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            result_str = result.stderr.decode().strip()
+            on_server = False if "No such file or directory" in result_str else True
+            if not on_server:
+                return False
+
+        return True

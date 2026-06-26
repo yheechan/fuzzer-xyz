@@ -58,7 +58,7 @@ def parse_argv() -> ParsedArgv:
         type=str,
         required=True,
         help="Fuzzer to prepare compilation targets for. If not specified.",
-        choices=BASELINE_FUZZERS,
+        choices=list(BASELINE_FUZZERS.keys()),
         metavar="FUZZER",
     )
     parser.add_argument(
@@ -187,7 +187,7 @@ def main():
     if not fuzzer.targets_on_server(parsed_argv.server):
         print(f"[SEND] SCP fuzzing targets to server {parsed_argv.server} for fuzzer {parsed_argv.fuzzer}.")
 
-        success = fuzzer.send_fuzz_tarets_to_server(parsed_argv.server)
+        success = fuzzer.send_fuzz_targets_to_server(parsed_argv.server)
         if not success:
             print(f"[SEND-ERROR] Failed to send fuzzing targets to server {parsed_argv.server} for fuzzer {parsed_argv.fuzzer}.")
             sys.exit(1)

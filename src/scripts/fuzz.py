@@ -53,7 +53,7 @@ def parse_argv() -> ParsedArgv:
         required=True,
         help="Fuzzer to prepare compilation targets for. If not specified.",
         metavar="FUZZER",
-        choices=BASELINE_FUZZERS
+        choices=list(BASELINE_FUZZERS.keys())
     )
     parser.add_argument(
         "-e",

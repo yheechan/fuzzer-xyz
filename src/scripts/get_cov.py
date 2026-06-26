@@ -51,7 +51,7 @@ def parse_argv() -> ParsedArgv:
         type=str,
         required=True,
         help="The fuzzer used to generate the coverage data.",
-        choices=BASELINE_FUZZERS,
+        choices=list(BASELINE_FUZZERS.keys()),
         metavar="FUZZER",
     )
     parser.add_argument(

@@ -92,27 +92,33 @@ def cleanup_logging() -> None:
 
     return
 
-def setup_task_logger(name: str, log_file: Path, stdout: bool = False) -> logging.Logger:
+def setup_task_logger(name: str, log_file: Path = None, stdout: bool = False) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
-    logger.propagate = False
+    
+    # 1. Prevent logs from doubling up by passing them to the root logger
+    logger.propagate = False 
 
-    # drop any handlers from a previous setup so re-runs don't duplicate lines
+    # 2. Clean up existing handlers to prevent duplicate lines on re-runs
     for handler in list(logger.handlers):
         logger.removeHandler(handler)
         handler.close()
 
-    file_handler = logging.FileHandler(log_file, mode="w")
-    file_handler.setFormatter(
-        logging.Formatter(
-            "[%(asctime)s] %(levelname)s: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-    )
-    logger.addHandler(file_handler)
+    # 3. Create the shared formatter
+    log_format = "[%(asctime)s] [%(threadName)s] %(levelname)s: %(message)s"
+    date_format = "%Y-%m-%d %H:%M:%S"
+    formatter = logging.Formatter(fmt=log_format, datefmt=date_format)
 
+    # 4. Attach File Handler if needed
+    if log_file is not None:
+        file_handler = logging.FileHandler(log_file, mode="w")
+        file_handler.setFormatter(formatter)  # Apply the format!
+        logger.addHandler(file_handler)
+
+    # 5. Attach Stdout Handler if needed
     if stdout:
         stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setFormatter(formatter)  # Apply the format!
         logger.addHandler(stdout_handler)
 
     return logger

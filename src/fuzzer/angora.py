@@ -301,35 +301,27 @@ class AngoraFuzzer(Fuzzer):
             bool: True if the targets are present on the server, False otherwise.
         """
 
-        cmd = f"ssh {server_address} 'ls {self.taint_fn}'"
-        result = subprocess.run(
-            cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-        
-        result_str = result.stderr.decode().strip()
-        on_server = False if "No such file or directory" in result_str else True
-        if not on_server:
-            print(f"[NO-TARGET] Fuzzing targets {self.taint_fn} not found on server {server_address}.")
-            return False
-        
-        cmd = f"ssh {server_address} 'ls {self.fast_fn}'"
-        result = subprocess.run(
-            cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
+        targets = [
+            self.taint_fn,
+            self.fast_fn
+        ]
+        for target in targets:
+            cmd = f"ssh {server_address} 'ls {target}'"
+            result = subprocess.run(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            
+            result_str = result.stderr.decode().strip()
+            on_server = False if "No such file or directory" in result_str else True
+            if not on_server:
+                print(f"[NO-TARGET] Fuzzing target {target} not found on server {server_address}.")
+                return False
 
-        result_str = result.stderr.decode().strip()
-        on_server = False if "No such file or directory" in result_str else True
-        if not on_server:
-            print(f"[NO-TARGET] Fuzzing targets {self.fast_fn} not found on server {server_address}.")
-            return False
+        return True
 
-        return on_server
 
     def init_coverage(self) -> bool:
         experiment_dirp = self.output_dir / "baseline_fuzzing" / self.__class__.__name__ / self.experiment_name

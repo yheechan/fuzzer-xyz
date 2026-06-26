@@ -18,10 +18,10 @@ ANGORA_FUZZER = ANGORA_ROOT / "bin" / "fuzzer"
 BB_COV_DIR = PROJ_ROOT / "bb_cov"
 BB_COV_BUILD = BB_COV_DIR / "build"
 
-BASELINE_FUZZERS = [
-    "aflpp",
-    "angora",
-]
+BASELINE_FUZZERS = {
+    "aflpp": "AFLppFuzzer",
+    "angora": "AngoraFuzzer",
+}
 
 TARGET_SUBJECTS = [
     "avconv",
