@@ -43,3 +43,33 @@ class AFLppFuzzer(Fuzzer):
     
     def targets_on_server(self, server_address: str) -> bool:
         raise NotImplementedError("Check if targets exist on server for AFL++ is not implemented yet.")
+    
+    def init_coverage(self) -> bool:
+        raise NotImplementedError("Initialize coverage for AFL++ is not implemented yet.")
+
+    def read_plot_data(self, plot_data_fn: Path) -> list[tuple[int, int]]:
+        """Parse AFL plot_data into a list of (relative_time_sec, corpus_count).
+
+        Columns (per AFL header):
+            relative_time, cycles_done, cur_item, corpus_count, ...
+        so index 0 is relative_time (seconds) and index 3 is corpus_count. Comment
+        and malformed lines are skipped. Samples are returned in chronological order;
+        corpus_count is monotonically non-decreasing.
+        """
+        samples: list[tuple[int, int]] = []
+        with open(plot_data_fn) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                cols = [c.strip() for c in line.split(",")]
+                if len(cols) <= 3:
+                    continue
+                try:
+                    rel_time = int(float(cols[0]))
+                    corpus_count = int(cols[3])
+                except ValueError:
+                    continue
+                samples.append((rel_time, corpus_count))
+        return samples
+

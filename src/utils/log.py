@@ -1,3 +1,4 @@
+import sys
 import logging
 import multiprocessing
 from logging.handlers import QueueHandler, QueueListener
@@ -90,3 +91,28 @@ def cleanup_logging() -> None:
         debug_log_queue = None
 
     return
+
+def setup_task_logger(name: str, log_file: Path, stdout: bool = False) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    # drop any handlers from a previous setup so re-runs don't duplicate lines
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+        handler.close()
+
+    file_handler = logging.FileHandler(log_file, mode="w")
+    file_handler.setFormatter(
+        logging.Formatter(
+            "[%(asctime)s] %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+    )
+    logger.addHandler(file_handler)
+
+    if stdout:
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        logger.addHandler(stdout_handler)
+
+    return logger

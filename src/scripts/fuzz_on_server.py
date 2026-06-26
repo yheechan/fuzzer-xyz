@@ -18,6 +18,9 @@ from src.utils.constants import (
     BASELINE_FUZZERS,
     RESEARCH_ROOT
 )
+from src.utils.common_utils import (
+    pip_install_requirements
+)
 
 @dataclass
 class ParsedArgv:
@@ -112,49 +115,6 @@ def parse_argv() -> ParsedArgv:
         NUM_FUZZERS=argv.parallel,
         duration=argv.duration,
     )
-
-def pip_install_requirements(server_address: str) -> bool:
-    """
-    Install the required Python packages on the server using pip.
-
-    Args:
-        server_address (str): The address of the server.
-
-    Returns:
-        bool: True if the installation was successful, False otherwise.
-    """
-    # Check if if .venv directory exists on the server
-    cmd = f"ssh {server_address} 'ls {PROJ_ROOT}/.venv'"
-    result = subprocess.run(
-        cmd,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    result_str = result.stderr.decode().strip()
-    on_server = False if "No such file or directory" in result_str else True
-
-    if not on_server:
-        cmd = f"ssh {server_address} 'cd {PROJ_ROOT} && python3 -m venv .venv'"
-        result = subprocess.run(
-            cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        print(f"[VENV] Created virtual environment on server {server_address}.")
-
-    cmd = f"ssh {server_address} 'cd {PROJ_ROOT} && source .venv/bin/activate && pip install -r requirements.txt'"
-    result = subprocess.run(
-        cmd,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-    
-    return True
 
 def run_fuzz_on_server(parsed_argv, fuzz_id) -> bool:
     """
@@ -257,7 +217,7 @@ def main():
         print(f"[FUZZ-ERROR] Fuzzing experiment failed on server {parsed_argv.server}.")
         sys.exit(1)
 
-    # Retrieve fuzz output and logs
+    # 4. Retrieve fuzz output and logs
     success = fuzzer.retrieve_fuzz_results_from_server(parsed_argv.server, fuzz_id)
     if not success:
         print(f"[RETRIEVE-ERROR] Failed to retrieve fuzzing results from server {parsed_argv.server}.")

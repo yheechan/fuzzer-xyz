@@ -2,6 +2,7 @@ from enum import Enum
 from pathlib import Path
 
 PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
+VENV_ROOT = PROJ_ROOT / ".venv"
 RESEARCH_ROOT = PROJ_ROOT.parent
 
 AFL_ROOT = PROJ_ROOT / "AFLplusplus"

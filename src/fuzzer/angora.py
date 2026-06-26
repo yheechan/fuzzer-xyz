@@ -2,7 +2,6 @@ import os
 import re
 import shutil
 import sys
-import signal
 import subprocess
 import time
 
@@ -33,6 +32,7 @@ from src.utils.common_utils import (
     remove_file,
 )
 from src.fuzzer.fuzzer import Fuzzer
+from src.coverage.coverage import Coverage
 
 # External taint-source model for open64() (libav/ffmpeg call open64 under
 # -D_FILE_OFFSET_BITS=64). open64_rule.c is committed; the .o is compiled on demand.
@@ -330,3 +330,57 @@ class AngoraFuzzer(Fuzzer):
             return False
 
         return on_server
+
+    def init_coverage(self) -> bool:
+        experiment_dirp = self.output_dir / "baseline_fuzzing" / self.__class__.__name__ / self.experiment_name
+
+        fuzz_id = self.fuzz_id
+
+        fuzz_outputs_dirp = experiment_dirp / "fuzz_outputs"
+        queue_dirp = fuzz_outputs_dirp / fuzz_id / "queue"
+        plot_datafp = fuzz_outputs_dirp / fuzz_id / "angora.log"
+
+
+        logs_dirp = experiment_dirp / "logs"
+        coverage_dirp = experiment_dirp / "coverage"
+
+        baseline_build_dirp = self.output_dir / "drivers" / "baseline_build"
+        system_drivers_dirp = self.output_dir / "drivers" / "system_drivers"
+
+        self.coverage = Coverage(
+            fuzzer_name=self.__class__.__name__,
+            target_program=self.target_program,
+            fuzz_id=fuzz_id,
+            fuzz_outputs_dirp=fuzz_outputs_dirp,
+            queue_dirp=queue_dirp,
+            plot_data_fp=plot_datafp,
+            logs_dirp=logs_dirp,
+            coverage_dirp=coverage_dirp,
+            baseline_build_dirp=baseline_build_dirp,
+            system_drivers_dirp=system_drivers_dirp,
+            read_plot_data_func=self.read_plot_data,
+        )
+
+    def read_plot_data(self, plot_data_fn: Path) -> list[tuple[int, int]]:
+        """Parse angora.log into a list of (relative_time_sec, corpus_count).
+
+        Columns (per angora header):
+            secs, density, num_inputs, num_hangs, num_crashes
+        so index 0 is relative_time (seconds) and index 2 is corpus_count. Comment
+        and malformed lines are skipped. Samples are returned in chronological order;
+        corpus_count is monotonically non-decreasing.
+        """
+        samples: list[tuple[int, int]] = []
+        with open(plot_data_fn) as f:
+            for line in f:
+                line = line.strip()
+                cols = [c.strip() for c in line.split(",")]
+                if len(cols) <= 2:
+                    continue
+                try:
+                    rel_time = int(float(cols[0]))
+                    corpus_count = int(cols[2])
+                except ValueError:
+                    continue
+                samples.append((rel_time, corpus_count))
+        return samples

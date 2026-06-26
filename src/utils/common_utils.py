@@ -7,6 +7,7 @@ import signal
 import subprocess
 import time
 import sys
+import tarfile
 
 from collections.abc import Iterator
 from pathlib import Path
@@ -14,7 +15,9 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
-
+from src.utils.constants import (
+    PROJ_ROOT,
+)
 from src.utils.signals import (
     stop_requested,
 )
@@ -399,3 +402,69 @@ def read_bbcov_file(cov_file: Path) -> dict[str, set[int]]:
                 bb_cov[cur_func].add(BB_index)
 
     return bb_cov
+
+def unpack_targz(targz_path: Path, output_dir: Path) -> bool:
+    """
+    Unpack a .tar.gz file to the specified output directory.
+
+    Args:
+        targz_path (Path): The path to the .tar.gz file.
+        output_dir (Path): The directory where the contents will be extracted.
+
+    Returns:
+        bool: True if extraction was successful, False otherwise.
+    """
+    if not targz_path.is_file():
+        print(f"Error: {targz_path} is not a valid file.")
+        return False
+
+    try:
+        with tarfile.open(targz_path, "r:gz") as tar:
+            tar.extractall(path=output_dir)
+        return True
+    except Exception as e:
+        print(f"Error extracting {targz_path}: {e}")
+        return False
+
+def pip_install_requirements(server_address: str) -> bool:
+    """
+    Install the required Python packages on the server using pip.
+
+    Args:
+        server_address (str): The address of the server.
+
+    Returns:
+        bool: True if the installation was successful, False otherwise.
+    """
+    # Check if if .venv directory exists on the server
+    cmd = f"ssh {server_address} 'ls {PROJ_ROOT}/.venv'"
+    result = subprocess.run(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    result_str = result.stderr.decode().strip()
+    on_server = False if "No such file or directory" in result_str else True
+
+    if not on_server:
+        cmd = f"ssh {server_address} 'cd {PROJ_ROOT} && python3 -m venv .venv'"
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        print(f"[VENV] Created virtual environment on server {server_address}.")
+
+    cmd = f"ssh {server_address} 'cd {PROJ_ROOT} && source .venv/bin/activate && pip install -r requirements.txt'"
+    result = subprocess.run(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    
+    return True

@@ -27,8 +27,10 @@ class FuzzerFactory:
         NUM_FUZZERS: int = 4,
         fuzz_id: str = None
     ) -> Fuzzer:
+
         if fuzzer_name not in cls.fuzzers:
             raise ValueError(f"Unknown fuzzer: {fuzzer_name}")
+
         return cls.fuzzers[fuzzer_name](
             output_dir,
             target_program,

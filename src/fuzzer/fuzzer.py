@@ -20,6 +20,7 @@ from src.utils.constants import (
 from src.compiler.build_logics import (
     BUILD_LOGICS_MAP
 )
+from src.coverage.coverage import Coverage
 
 class Fuzzer(ABC):
     output_dir: Path
@@ -37,6 +38,8 @@ class Fuzzer(ABC):
 
     processes = []
     stop_requested = False
+
+    coverage: Coverage
 
     def __init__(
             self,
@@ -62,6 +65,30 @@ class Fuzzer(ABC):
     @abstractmethod
     def compile(self) -> bool:
         raise NotImplementedError("Subclasses must implement the compile method.")
+
+    @abstractmethod
+    def check_fuzz_targets(self) -> bool:
+        raise NotImplementedError("Subclasses must implement the check_fuzz_targets method.")
+
+    @abstractmethod
+    def wait_print_fuzz_stats(self):
+        raise NotImplementedError("Subclasses must implement the wait_print_fuzz_stats method.")
+    
+    @abstractmethod
+    def fuzz(self) -> bool:
+        raise NotImplementedError("Subclasses must implement the fuzz method.")
+
+    @abstractmethod
+    def targets_on_server(self, server_address: str) -> bool:
+        raise NotImplementedError("Subclasses must implement the targets_on_server method.")
+
+    @abstractmethod
+    def init_coverage(self) -> bool:
+        raise NotImplementedError("Subclasses must implement the init_coverage method.")
+
+    @abstractmethod
+    def read_plot_data(plot_data_fn: Path) -> list[tuple[int, int]]:
+        raise NotImplementedError("Subclasses must implement the read_plot_data method.")
       
     def init_fuzz_output_dir(self) -> bool:
         self.experiment_dirn = self.output_dir / "baseline_fuzzing" / self.__class__.__name__ / self.experiment_name
@@ -108,9 +135,6 @@ class Fuzzer(ABC):
 
         return True
     
-    @abstractmethod
-    def check_fuzz_targets(self) -> bool:
-        raise NotImplementedError("Subclasses must implement the check_fuzz_targets method.")
     
     def handle_sigint(self, signum, frame):
         if self.stop_requested:
@@ -123,17 +147,6 @@ class Fuzzer(ABC):
             if p.poll() is None:
                 p.send_signal(signal.SIGINT)
     
-    @abstractmethod
-    def wait_print_fuzz_stats(self):
-        raise NotImplementedError("Subclasses must implement the wait_print_fuzz_stats method.")
-    
-    @abstractmethod
-    def fuzz(self) -> bool:
-        raise NotImplementedError("Subclasses must implement the fuzz method.")
-
-    @abstractmethod
-    def targets_on_server(self, server_address: str) -> bool:
-        raise NotImplementedError("Subclasses must implement the targets_on_server method.")
     
     def send_fuzz_tarets_to_server(self, server_address: str) -> bool:
 
@@ -227,3 +240,5 @@ class Fuzzer(ABC):
             return False
         
         return True
+
+
