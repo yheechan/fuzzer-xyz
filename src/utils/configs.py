@@ -17,7 +17,7 @@ SUN_LEN = 108
 # These are the hostnames of the machines where the fuzzers will run.
 SERVER_ADDRESS_LIST = [
     "gaster1.swtv",
-    "gaster4.swtv",
+    # "gaster4.swtv",
     "gaster5.swtv",
     "gaster6.swtv",
     "gaster9.swtv",
@@ -34,6 +34,6 @@ SERVER_ADDRESS_LIST = [
 
 
 EXPERIMENT_BUCKET = {
-    "aflpp": "0620_4_proc_experiment",
+    "aflpp": "aflpp_4_proc_exp",
     "angora": "angora_4_proc_exp"
 }

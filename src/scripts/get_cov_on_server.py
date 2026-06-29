@@ -55,7 +55,8 @@ class ParsedArgv:
 def run_cmd(cmd: str) -> subprocess.CompletedProcess:
     """Run a shell command, capturing stdout/stderr as text."""
     return subprocess.run(
-        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        # text=True
     )
 
 def remote_path_exists(server: str, path: Path, is_dir: bool = False) -> bool:
@@ -104,6 +105,7 @@ def parse_argv() -> ParsedArgv:
         type=int,
         required=False,
         help="Window size in minutes for coverage data aggregation.",
+        default=10,
         metavar="WINDOW_SIZE"
     )
     argv = parser.parse_args()
